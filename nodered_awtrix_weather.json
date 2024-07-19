@@ -1,0 +1,117 @@
+[
+    {
+        "id": "weather_flow",
+        "type": "tab",
+        "label": "Weather Temp Flow",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "get_weather",
+        "type": "http request",
+        "z": "weather_flow",
+        "name": "Get Weather",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://api.openweathermap.org/data/2.5/weather?q=<city>&appid=<api_key>&units=metric",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 190,
+        "y": 260,
+        "wires": [
+            [
+                "process_weather"
+            ]
+        ]
+    },
+    {
+        "id": "process_weather",
+        "type": "function",
+        "z": "weather_flow",
+        "name": "Process Weather",
+        "func": "const weatherGroups = {\n    200: 'Thunderstorm', 201: 'Thunderstorm', 202: 'Thunderstorm', 210: 'Thunderstorm', 211: 'Thunderstorm', 212: 'Thunderstorm', 221: 'Thunderstorm', 230: 'Thunderstorm', 231: 'Thunderstorm', 232: 'Thunderstorm',\n    300: 'Drizzle', 301: 'Drizzle', 302: 'Drizzle', 310: 'Drizzle', 311: 'Drizzle', 312: 'Drizzle', 313: 'Drizzle', 314: 'Drizzle', 321: 'Drizzle',\n    500: 'Rain', 501: 'Rain', 502: 'Rain', 503: 'Rain', 504: 'Rain', 511: 'Rain', 520: 'Rain', 521: 'Rain', 522: 'Rain', 531: 'Rain',\n    600: 'Snow', 601: 'Snow', 602: 'Snow', 611: 'Snow', 612: 'Snow', 613: 'Snow', 615: 'Snow', 616: 'Snow', 620: 'Snow', 621: 'Snow', 622: 'Snow',\n    701: 'Mist', 711: 'Smoke', 721: 'Haze', 731: 'Dust', 741: 'Fog', 751: 'Sand', 761: 'Dust', 762: 'Ash', 771: 'Squall', 781: 'Tornado',\n    800: 'Clear',\n    801: 'Clouds', 802: 'Clouds', 803: 'Clouds', 804: 'Clouds'\n};\n\nconst weatherIcons = {\n    'Thunderstorm': {\n        '22-5': 43748,\n        '6-21': 51453\n    },\n    'Drizzle': {\n        '22-5': 60934,\n        '6-21': 26091\n    },\n    'Rain': {\n        '22-5': 72,\n        '6-21': 72\n    },\n    'Snow': {\n        '22-5': 7123,\n        '6-21': 7123\n    },\n    'Mist': {\n        '22-5': 7654,\n        '6-21': 7654\n    },\n    'Clear': {\n        '22-5': 13345,\n        '6-21': 11201\n    },\n    'Clouds': {\n        '22-5': 26089,\n        '6-21': 52449\n    },\n    'Unknown': {\n        '22-5': 13345,\n        '6-21': 11201\n    }\n};\n\nfunction getTimeRange(hour) {\n    if (22 <= hour || hour < 6) {\n        return '22-5';\n    } else {\n        return '6-21';\n    }\n}\n\nif (msg.payload && msg.payload.main && msg.payload.weather) {\n    const temperature = Math.round(msg.payload.main.temp);\n    const weatherDescription = msg.payload.weather[0].description;\n    const weatherCode = msg.payload.weather[0].id;\n    const weatherGroup = weatherGroups[weatherCode] || 'Unknown';\n\n    const currentHour = new Date().getHours();\n    const currentTimeRange = getTimeRange(currentHour);\n\n    const currentIcon = weatherIcons[weatherGroup][currentTimeRange];\n\n    msg.payload = {\n        text: `${temperature} °C`,\n        duration: 10,\n        icon: currentIcon,\n        rainbow: false,\n        stack: true\n    };\n\n    return [msg];\n} else {\n    node.error(\"Invalid weather data\", msg);\n    return null;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 100,
+        "wires": [
+            [
+                "send_to_awtrix"
+            ]
+        ]
+    },
+    {
+        "id": "send_to_awtrix",
+        "type": "http request",
+        "z": "weather_flow",
+        "name": "Send to Awtrix Device",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://<awtrix_ip>/api/custom?name=weather_temp",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 500,
+        "y": 260,
+        "wires": [
+            [
+                "debug_response"
+            ]
+        ]
+    },
+    {
+        "id": "debug_response",
+        "type": "debug",
+        "z": "weather_flow",
+        "name": "Debug Response",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 690,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "inject",
+        "type": "inject",
+        "z": "weather_flow",
+        "name": "Trigger",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "600",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 160,
+        "wires": [
+            [
+                "get_weather"
+            ]
+        ]
+    }
+]
